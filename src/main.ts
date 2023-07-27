@@ -1,68 +1,78 @@
 import "./style.css";
-import Web3 from "web3";
+import { ethers } from "ethers";
 
-const ercContractAbi: string;
-const simpleContractAbi: string;
-
+import ercContractAbi from "./abis/erc20ContractAbi.json";
+import simpleContractAbi from "./abis/simpleContractAbi.json";
 class App {
-  protected web3: any;
-  public userId: string;
+  public userId: any;
   protected erc20ContractAddress: string =
     "0xd9145CCE52D386f254917e481eB44e9943F39138";
   protected simpleContractAddress: string =
     "0xd9145CCE52D386f254917e481eB44e9943F39138";
-  erc20Contract: unknown;
+  protected erc20Contract: ethers.Contract | undefined;
+  protected simpleContract: ethers.Contract | undefined;
 
   async init() {
-    this.loadweb3();
+    await this.loadweb3();
   }
 
   async loadweb3() {
     if (window.ethereum) {
-      this.web3 = new Web3(window.ethereum);
-      this.loadContracts();
-      this.isLoggedIn();
+      // const provider = new ethers.BrowserProvider(window.ethereum);
+      // this.userId = provider.getSigner();
+      await this.loadContracts();
+      await this.isLoggedIn();
     }
   }
 
   async loadContracts() {
-    this.erc20Contract = await new this.web3.eth.Contract(
+    this.erc20Contract = new ethers.Contract(
+      this.erc20ContractAddress,
       ercContractAbi,
-      this.erc20ContractAddress
+      this.userId
     );
 
-    this.simpleContractAddress = await new this.web3.eth.Contract(
+    this.simpleContract = new ethers.Contract(
+      this.simpleContractAddress,
       simpleContractAbi,
-      this.simpleContractAddress
+      this.userId
     );
   }
 
   async login() {
-    window.ethereum
-      .request({
-        method: "eth_requestAccounts",
-      })
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    provider
+      .getSigner()
       .then((res) => {
-        this.userId = res[0];
+        this.userId = res.address;
       })
       .catch((err) => {
-        console.error(err);
+        alert("You have canceled the login.")
       });
   }
 
-  async isLoggedIn() {
+  isLoggedIn = async ()  =>  {
     const account = await window.ethereum.request({
       method: "eth_accounts",
     });
 
     if (account.length > 0) {
-      this.userId = account[0];
+      this.userId = await account[0];
     }
   }
 }
 
 const app = new App();
 
+await app.init();
+
+console.log(await app.userId)
+
 document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
-  <h1>Hello world</h1>
+  <h1>Hello world </h1>
+  <button id="button">Login</button>
 `;
+
+document.querySelector("#button")?.addEventListener("click", async (e) => {
+  console.log(await app.login());
+});
